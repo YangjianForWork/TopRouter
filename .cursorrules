@@ -1,0 +1,221 @@
+# TopRouter - Cursor Rules
+
+## Project Overview
+**TopRouter** is a high-performance, payment-free AI intelligent routing gateway with 14-dimensional multilingual static analysis and dynamic fallback routing.
+
+**Core Features**:
+- 14-dimensional multilingual static analysis (weighted classification)
+- L1/L2 fallback system (rule-based + LLM-assisted classification)
+- LRU caching with TTL
+- OpenAI-compatible API endpoints
+- MCP (Model Context Protocol) support for OpenClaw integration
+- Intelligent model routing (SIMPLE → deepseek-chat, REASONING → deepseek-reasoner)
+- Rate limiting and payment-free design
+
+**Target Users**: Developers needing intelligent AI model routing without payment dependencies.
+
+## Tech Stack & Architecture
+- **Language**: TypeScript (ES modules, strict mode)
+- **Runtime**: Node.js 18+ (ESM)
+- **Framework**: Express.js
+- **Validation**: Zod
+- **Caching**: LRU-Cache
+- **Protocol**: JSON-RPC 2.0 (MCP)
+- **Package Manager**: npm
+
+**Key Directories**:
+- `src/core/` - Core classification engine, keywords, caching
+- `src/mcp/` - MCP protocol server implementation
+- `src/middleware/` - Auth, quota, rate limiting
+- `src/quota/` - Local quota management (memory/Redis)
+
+## Code Style Guidelines
+
+### TypeScript Configuration
+- Strict mode enabled (`"strict": true`)
+- `verbatimModuleSyntax: true` (use `.js` extensions for imports)
+- `noUncheckedIndexedAccess: true` (safe array/object access)
+- `exactOptionalPropertyTypes: true` (explicit undefined)
+- `module: "nodenext"` (Node.js ES modules)
+- `target: "esnext"` (latest ECMAScript)
+
+### Import Conventions
+```typescript
+// Use .js extensions for relative imports
+import { Classifier } from "./classifier.js";
+import type { ScoringResult } from "./types.js";
+
+// Group imports: external → internal
+import express from "express";
+import { LRUCache } from "lru-cache";
+import { Classifier } from "./core/classifier.js";
+```
+
+### Naming Conventions
+- **Variables & functions**: `camelCase`
+- **Classes & interfaces**: `PascalCase`
+- **Type aliases & enums**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE` for true constants, otherwise `camelCase`
+- **Files**: `kebab-case.ts` (e.g., `keyword-manager.ts`)
+
+### String & Formatting
+- Use double quotes (`"`) for string literals
+- 2-space indentation
+- Semicolons required
+- Max line length: 100 characters (prioritize readability)
+
+### Error Handling
+- Throw `Error` objects with descriptive messages
+- Catch errors at appropriate boundaries
+- Consider `Result`-type patterns for predictable error handling
+
+## Development Workflow
+
+### Build & Test Commands
+```bash
+# Install dependencies
+npm install
+
+# Type checking (no emit)
+npm run typecheck
+
+# Compile TypeScript
+npm run build
+
+# Run manual test script
+npm run test:manual
+
+# Start development server
+npm run dev
+
+# Start production server
+npm run start
+```
+
+### Adding New LLM Providers
+1. Implement the `LLMProvider` interface (`src/core/llm-provider.ts`)
+2. Add API key configuration in `src/config.ts`
+3. Register provider in `src/server.ts` when key is present
+4. Model router will automatically include new provider
+
+### Classification System
+**L1 Static Scanner** (<1ms):
+- 14-dimensional weighted scoring
+- Multilingual keyword matching (9 languages)
+- Confidence threshold: 0.7
+
+**L2 LLM Fallback**:
+- Triggers when L1 confidence < 0.7
+- Uses low-cost model (e.g., DeepSeek-Chat)
+- Results cached for 1 hour
+
+**Routing Tiers**:
+- **SIMPLE**: Simple Q&A, translation → `deepseek-chat`
+- **MEDIUM**: Code generation, tool calling → `kimi 2.5`
+- **COMPLEX**: Long document analysis → `gemini 3.1 pro`
+- **REASONING**: Complex reasoning, math proofs → `deepseek-reasoner`
+
+## Key Constraints & Design Decisions
+
+### Payment-Free Design
+- ❌ **Removed**: `x402` payment protocol, `USDC` cryptocurrency dependencies
+- ✅ **Replaced with**: Local quota management, API key-based rate limiting
+- **Goal**: Complete autonomy, no external payment systems
+
+### Chinese Environment Optimization
+- Multilingual keyword library (9 languages, Chinese optimized)
+- Domestic model priority (DeepSeek, Kimi, Zhipu, Qianwen)
+- Chinese reasoning pattern recognition
+
+### Performance Requirements
+- L1 classification: <1ms latency
+- L2 fallback: <500ms total (including LLM call)
+- Cache hit rate: >90% for identical prompts
+
+## Testing & Quality
+
+### Current Testing Strategy
+- Manual test script: `test-classifier.ts`
+- API endpoint testing via curl/Postman
+- No formal test framework yet
+
+### Recommended Additions
+```bash
+# Add to package.json scripts
+"test": "vitest run",
+"test:watch": "vitest",
+"test:coverage": "vitest run --coverage",
+"lint": "eslint src --ext .ts",
+"lint:fix": "eslint src --ext .ts --fix",
+"format": "prettier --write src/**/*.ts",
+"format:check": "prettier --check src/**/*.ts"
+```
+
+### Test Coverage Goals
+- Core classifier: 90%+
+- API endpoints: 85%+
+- Error handling: 95%+
+
+## Git & Collaboration
+
+### Commit Conventions
+```
+<type>(<scope>): <description>
+
+Types: feat, fix, docs, style, refactor, test, chore
+Examples:
+- feat(classifier): add 15th dimension for creative tasks
+- fix(cache): resolve TTL expiration bug
+- docs(README): add Chinese installation instructions
+```
+
+### Branch Naming
+- `feature/<short-description>` (e.g., `feature/kimi-integration`)
+- `fix/<issue>` (e.g., `fix/rate-limit-bug`)
+- `docs/<topic>` (e.g., `docs/api-reference`)
+
+## Project-Specific AI Instructions
+
+### When Implementing Features
+1. **Check existing patterns** in `src/core/classifier.ts` and `src/core/keywords.ts`
+2. **Maintain strict typing** - no `any`, use explicit types
+3. **Preserve Chinese optimization** - keep multilingual keyword support
+4. **Avoid payment logic** - this is a payment-free project
+5. **Optimize for performance** - L1 must stay under 1ms
+
+### When Writing Documentation
+- Use bilingual format (English + Chinese) for key sections
+- Include code examples with both import styles
+- Reference existing patterns in AGENTS.md
+- Keep technical debt visible (TODO comments)
+
+### When Refactoring
+- Don't break the 14-dimensional scoring algorithm
+- Maintain backward compatibility with existing API
+- Update all related test cases
+- Verify cache behavior remains consistent
+
+## Quick Reference
+
+**Entry Points**:
+- Main server: `src/server.ts`
+- Core classifier: `src/core/classifier.ts`
+- Keywords: `src/core/keywords.ts`
+- Configuration: `src/config.ts`
+
+**API Endpoints**:
+- `GET /health` - Health check
+- `POST /v1/classify` - Classification endpoint
+- `POST /v1/chat/completions` - OpenAI-compatible chat
+- `GET /admin/providers` - Provider management
+
+**Environment Variables**:
+- `PORT=94527` - Server port
+- `DEEPSEEK_API_KEY` - DeepSeek API key
+- `CACHE_MAX_SIZE=1000` - LRU cache size
+- `CACHE_TTL_MS=3600000` - Cache TTL (1 hour)
+- `CONFIDENCE_THRESHOLD=0.7` - L1/L2 threshold
+
+---
+
+*This project is authored by AI. Last updated: 2026-03-01*
