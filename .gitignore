@@ -42,7 +42,6 @@ temp/
 ProjectPlan.md
 ClawRouterAnalysisReport.md
 TestReport-*.md
-AGENTS.md
 
 # Server process files
 server.pid

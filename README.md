@@ -380,3 +380,5 @@ TopRouter v1.0.0 已完成原始路线图中的第一阶段（核心引擎）和
 
 MIT License. See the [LICENSE](./LICENSE) file for details.  
 MIT 许可证。详见 [LICENSE](./LICENSE) 文件。
+
+项目作者是 AI
