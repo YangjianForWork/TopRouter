@@ -4,6 +4,11 @@ High-performance, payment-free AI intelligent routing gateway with 14‑dimensio
 
 高性能、无支付依赖的 AI 智能路由网关，具备 14 维多语言静态分析与动态回退路由能力。
 
+### 说明 / statement
+The core logic is from [ClawRouter](https://github.com/BlockRunAI/ClawRouter) 
+
+核心逻辑来源于ClawRouter
+
 ## Features / 特性
 
 - **14‑dimensional multilingual static analysis**: Weighted classification across reasoning, code, technical terms, multi‑step patterns, and more.  
