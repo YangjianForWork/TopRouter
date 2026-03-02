@@ -35,7 +35,7 @@ const quotaManager = new MemoryQuotaManager({
 
 console.log(`Quota management ${config.enableQuota ? "enabled" : "disabled"}`);
 if (config.apiKeys.length > 0) {
-  console.log(`Loaded ${config.apiKeys.length} API keys`);
+  console.log("Quota authentication enabled");
 }
 
 // Initialize L2 classifier if API key is provided
@@ -44,7 +44,7 @@ if (config.deepseekApiKey) {
   l2Classifier = new DeepSeekClassifier(config.deepseekApiKey, config.deepseekApiUrl);
   console.log("L2 DeepSeek classifier enabled");
 } else {
-  console.log("L2 classifier disabled (no API key provided)");
+  console.log("L2 classifier disabled");
 }
 
 // Initialize enhanced classifier with L1 cache and optional L2 fallback
