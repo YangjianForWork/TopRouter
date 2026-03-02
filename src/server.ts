@@ -2,7 +2,13 @@ import express from "express";
 import { createCache, generateCacheKey } from "./core/cache.js";
 import { EnhancedClassifier } from "./core/enhanced-classifier.js";
 import { DeepSeekClassifier } from "./core/llm-classifier.js";
-import { DeepSeekProvider, ModelRouter } from "./core/llm-provider.js";
+import {
+  DeepSeekProvider,
+  KimiProvider,
+  ZhipuProvider,
+  QianwenProvider,
+  ModelRouter,
+} from "./core/llm-provider.js";
 import { MCPServer } from "./mcp/server.js";
 import { getConfig } from "./config.js";
 import { rateLimitMiddleware } from "./middleware/rate-limit.js";
@@ -35,10 +41,7 @@ if (config.apiKeys.length > 0) {
 // Initialize L2 classifier if API key is provided
 let l2Classifier = undefined;
 if (config.deepseekApiKey) {
-  l2Classifier = new DeepSeekClassifier(
-    config.deepseekApiKey,
-    config.deepseekApiUrl,
-  );
+  l2Classifier = new DeepSeekClassifier(config.deepseekApiKey, config.deepseekApiUrl);
   console.log("L2 DeepSeek classifier enabled");
 } else {
   console.log("L2 classifier disabled (no API key provided)");
@@ -54,12 +57,24 @@ const classifier = new EnhancedClassifier({
 // Initialize model router for chat completions
 const modelRouter = new ModelRouter();
 if (config.deepseekApiKey) {
-  const deepseekProvider = new DeepSeekProvider(
-    config.deepseekApiKey,
-    config.deepseekApiUrl,
-  );
+  const deepseekProvider = new DeepSeekProvider(config.deepseekApiKey, config.deepseekApiUrl);
   modelRouter.registerProvider("deepseek", deepseekProvider);
   console.log("DeepSeek provider registered for chat completions");
+}
+if (config.kimiApiKey) {
+  const kimiProvider = new KimiProvider(config.kimiApiKey);
+  modelRouter.registerProvider("kimi", kimiProvider);
+  console.log("Kimi provider registered for chat completions");
+}
+if (config.zhipuApiKey) {
+  const zhipuProvider = new ZhipuProvider(config.zhipuApiKey);
+  modelRouter.registerProvider("zhipu", zhipuProvider);
+  console.log("Zhipu provider registered for chat completions");
+}
+if (config.qianwenApiKey) {
+  const qianwenProvider = new QianwenProvider(config.qianwenApiKey);
+  modelRouter.registerProvider("qianwen", qianwenProvider);
+  console.log("Qianwen provider registered for chat completions");
 }
 
 // Initialize MCP server for OpenClaw integration
@@ -103,15 +118,96 @@ app.get("/admin/providers", (req, res) => {
   });
 });
 
+app.get("/admin/keys", (req, res) => {
+  if (!config.enableQuota) {
+    return res.json({
+      quotaEnabled: false,
+      message: "Quota management is disabled",
+      keys: [],
+    });
+  }
+
+  const usages = quotaManager.getAllUsage();
+  const keys = usages.map(usage => {
+    const limits = quotaManager.getLimits(usage.apiKey);
+    return {
+      apiKey: usage.apiKey.substring(0, 8) + "...", // Mask for security
+      limits: limits || { dailyTokenLimit: 0, monthlyTokenLimit: 0 },
+      usage: {
+        dailyTokens: usage.dailyTokens,
+        monthlyTokens: usage.monthlyTokens,
+        remainingDaily: limits ? Math.max(0, limits.dailyTokenLimit - usage.dailyTokens) : 0,
+        remainingMonthly: limits ? Math.max(0, limits.monthlyTokenLimit - usage.monthlyTokens) : 0,
+        lastResetDaily: usage.lastResetDaily.toISOString(),
+        lastResetMonthly: usage.lastResetMonthly.toISOString(),
+        requestsCount: usage.requestsCount,
+      },
+    };
+  });
+
+  res.json({
+    quotaEnabled: true,
+    count: keys.length,
+    keys,
+  });
+});
+
+app.get("/admin/stats", (req, res) => {
+  const providers = modelRouter.getProviders();
+  const providerStats = providers.map(({ name, provider }) => ({
+    name,
+    displayName: provider.getDisplayName(),
+    modelCount: provider.listModels().length,
+  }));
+
+  res.json({
+    cache: {
+      size: cache.size(),
+      maxSize: config.cacheMaxSize,
+      ttlMs: config.cacheTtlMs,
+    },
+    providers: {
+      count: providers.length,
+      details: providerStats,
+    },
+    quota: {
+      enabled: config.enableQuota,
+      keyCount: config.enableQuota ? quotaManager.getAllUsage().length : 0,
+    },
+    server: {
+      uptime: process.uptime(),
+      environment: config.nodeEnv,
+      port: config.port,
+    },
+  });
+});
+
+app.get("/admin/cost", (req, res) => {
+  // Placeholder for cost savings dashboard
+  // In a real implementation, this would track actual token usage per model
+  // and calculate savings based on model pricing differences
+  res.json({
+    costTrackingEnabled: false,
+    message: "Cost tracking not yet implemented. Planned for Phase 3 enhancement.",
+    estimatedSavings: {
+      monthly: 0,
+      currency: "USD",
+    },
+    recommendations: [
+      "Implement token usage tracking per model",
+      "Add pricing data for each provider",
+      "Calculate savings from routing simple prompts to cheaper models",
+    ],
+  });
+});
+
 // Rate limiting for API endpoints
 app.use("/v1", rateLimitMiddleware);
 
 // Authentication and quota middleware (if enabled)
 if (config.enableQuota) {
   app.use("/v1", ...authQuotaMiddleware(quotaManager));
-  console.log(
-    "API key authentication and quota enforcement enabled for /v1 endpoints",
-  );
+  console.log("API key authentication and quota enforcement enabled for /v1 endpoints");
 }
 
 // Classification endpoint
@@ -120,16 +216,12 @@ app.post("/v1/classify", async (req, res) => {
     const { prompt, estimatedTokens } = req.body;
 
     if (typeof prompt !== "string" || prompt.trim().length === 0) {
-      return res
-        .status(400)
-        .json({ error: "prompt is required and must be a non-empty string" });
+      return res.status(400).json({ error: "prompt is required and must be a non-empty string" });
     }
 
     const tokens = estimatedTokens ?? Math.ceil(prompt.length / 4); // rough estimate if not provided
     if (typeof tokens !== "number" || tokens < 0) {
-      return res
-        .status(400)
-        .json({ error: "estimatedTokens must be a non-negative number" });
+      return res.status(400).json({ error: "estimatedTokens must be a non-negative number" });
     }
 
     const result = await classifier.classify(prompt, tokens);
@@ -184,10 +276,7 @@ app.get("/v1/quota", (req, res) => {
         dailyTokens: usage.dailyTokens,
         monthlyTokens: usage.monthlyTokens,
         remainingDaily: Math.max(0, limits.dailyTokenLimit - usage.dailyTokens),
-        remainingMonthly: Math.max(
-          0,
-          limits.monthlyTokenLimit - usage.monthlyTokens,
-        ),
+        remainingMonthly: Math.max(0, limits.monthlyTokenLimit - usage.monthlyTokens),
         lastResetDaily: usage.lastResetDaily.toISOString(),
         lastResetMonthly: usage.lastResetMonthly.toISOString(),
         requestsCount: usage.requestsCount,
@@ -202,13 +291,7 @@ app.get("/v1/quota", (req, res) => {
 // OpenAI-compatible chat completions endpoint with intelligent routing
 app.post("/v1/chat/completions", async (req, res) => {
   try {
-    const {
-      messages,
-      model: requestedModel,
-      temperature,
-      max_tokens,
-      stream,
-    } = req.body;
+    const { messages, model: requestedModel, temperature, max_tokens, stream } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({
@@ -218,28 +301,27 @@ app.post("/v1/chat/completions", async (req, res) => {
     }
 
     // Extract prompt from messages (concatenate all content for classification)
-    const prompt = messages.map((msg) => msg.content).join("\n");
+    const prompt = messages.map(msg => msg.content).join("\n");
     const estimatedTokens = Math.ceil(prompt.length / 4); // rough estimate
 
     // Classify the prompt
     const classification = await classifier.classify(prompt, estimatedTokens);
     console.log(
-      `Classification: ${classification.tier} (confidence: ${classification.confidence})`,
+      `Classification: ${classification.tier} (confidence: ${classification.confidence})`
     );
 
     // Check if any providers are available
     if (!modelRouter.hasProviders()) {
       return res.status(503).json({
         error: "Service unavailable",
-        message:
-          "No LLM providers configured. Please set at least one API key.",
+        message: "No LLM providers configured. Please set at least one API key.",
       });
     }
 
     // Route to appropriate provider
     const { provider, model: selectedModel } = modelRouter.routeByTier(
       classification.tier,
-      requestedModel,
+      requestedModel
     );
 
     // Prepare chat completion request
@@ -255,9 +337,7 @@ app.post("/v1/chat/completions", async (req, res) => {
     const startTime = Date.now();
     const response = await provider.chatCompletion(chatRequest);
     const elapsed = Date.now() - startTime;
-    console.log(
-      `Provider ${provider.getDisplayName()} responded in ${elapsed}ms`,
-    );
+    console.log(`Provider ${provider.getDisplayName()} responded in ${elapsed}ms`);
 
     // Consume quota if enabled and API key is present
     if (config.enableQuota) {
@@ -318,7 +398,5 @@ const port = config.port;
 app.listen(port, () => {
   console.log(`TopRouter server listening on port ${port}`);
   console.log(`Environment: ${config.nodeEnv}`);
-  console.log(
-    `Cache size: ${config.cacheMaxSize}, TTL: ${config.cacheTtlMs}ms`,
-  );
+  console.log(`Cache size: ${config.cacheMaxSize}, TTL: ${config.cacheTtlMs}ms`);
 });
