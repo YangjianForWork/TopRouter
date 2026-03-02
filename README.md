@@ -1,27 +1,6 @@
 # TopRouter
 
-High-performance, payment-free AI intelligent routing gateway with 14‑dimensional multilingual static analysis and dynamic fallback routing.
-
-**TopRouter** - 高性能、无支付依赖的 AI 智能路由网关，具备 14 维多语言静态分析与动态回退路由能力。
-
-### 项目说明
-
-The core logic is based on [ClawRouter](https://github.com/BlockRunAI/ClawRouter), an open-source AI routing project.
-
-## Features
-
-### Core Capabilities
-
-- **14-dimensional multilingual static analysis**: Weighted classification across reasoning, code, technical terms, multi‑step patterns, and more.
-- **L1/L2 fallback system**: Fast rule‑based classification (L1) with optional LLM‑assisted classification (L2) when confidence is low.
-- **LRU caching**: Results cached with TTL to avoid repeated classification of identical prompts.
-- **OpenAI‑compatible API**: Provides `/v1/classify` classification and `/v1/chat/completions` with intelligent routing.
-- **MCP (Model Context Protocol) support**: JSON‑RPC 2.0 interface for OpenClaw integration with tool calling and resource access.
-- **Intelligent model routing**: Automatically routes requests to appropriate models across multiple providers (e.g., SIMPLE → lightweight models, REASONING → high-performance models).
-- **Multi‑provider support**: Integrated support for DeepSeek, Kimi (Moonshot AI), Zhipu AI (GLM), and Qianwen (Alibaba).
-- **Rate limiting**: Per‑IP rate limiting for API endpoints.
-- **Payment‑free design**: No external payment dependencies; uses local quota and API‑key‑based rate limiting.
-- **Admin dashboard**: Built‑in monitoring endpoints for API key usage, provider status, and server statistics.
+**高点智能路由** - 高性能、无支付依赖的 AI 智能路由网关，具备 14 维多语言静态分析与动态回退路由能力。
 
 ## 核心特性
 
@@ -35,52 +14,6 @@ The core logic is based on [ClawRouter](https://github.com/BlockRunAI/ClawRouter
 - **速率限制**：基于 IP 的 API 端点访问频率限制。
 - **无支付设计**：无外部支付依赖，采用本地配额和基于 API 密钥的速率限制。
 - **管理面板**：内置监控端点，用于 API 密钥使用情况、提供商状态和服务器统计。
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ (ES modules)
-- npm or yarn
-
-### Installation
-
-```bash
-git clone https://github.com/YangjianForWork/TopRouter.git
-cd TopRouter
-npm install
-```
-
-### Configuration
-
-Copy the example environment file and adjust the values:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` to set your API keys:
-
-- `DEEPSEEK_API_KEY`: For L2 fallback classification and chat completions
-- `KIMI_API_KEY`, `ZHIPU_API_KEY`, `QIANWEN_API_KEY`: For domestic LLM providers (chat completions)
-- Other configuration options as needed
-
-### Running the Server
-
-**Development mode (hot reload):**
-
-```bash
-npm run dev
-```
-
-**Production mode (build first):**
-
-```bash
-npm run build
-npm start
-```
-
-The server will start on `http://localhost:94527` (or the port set in `PORT`).
 
 ## 快速开始
 
@@ -127,184 +60,6 @@ npm start
 ```
 
 服务器将在 `http://localhost:94527`（或 `PORT` 环境变量设置的端口）启动。
-
-## API Reference
-
-### Health Check
-
-**Endpoint:** `GET /health`
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-02-28T12:34:56.789Z"
-}
-```
-
-### Prompt Classification
-
-**Endpoint:** `POST /v1/classify`
-Classify a prompt and estimate its complexity tier.
-
-**Request Body:**
-
-```json
-{
-  "prompt": "请帮我写一个异步的 Python 函数，使用 import aiohttp 来抓取网页内容并解析 JSON。",
-  "estimatedTokens": 60
-}
-```
-
-**Response:**
-
-```json
-{
-  "score": 0.15,
-  "tier": "MEDIUM",
-  "confidence": 0.86,
-  "signals": ["code(import,函数)"],
-  "cached": false
-}
-```
-
-### Intelligent Chat Completion
-
-**Endpoint:** `POST /v1/chat/completions`
-OpenAI‑compatible endpoint with intelligent routing.
-
-**Request Body:**
-
-```json
-{
-  "messages": [{ "role": "user", "content": "证明勾股定理，并给出逐步推导过程。" }],
-  "model": "deepseek-chat", // Optional: override automatic routing
-  "temperature": 0.7,
-  "max_tokens": 100
-}
-```
-
-**Response:** (Follows OpenAI's chat completions format)
-
-### MCP Integration
-
-**Endpoint:** `POST /mcp`
-Model Context Protocol endpoint for OpenClaw integration.
-
-**Available Tools:**
-
-- `classify_prompt`: Classify a prompt and determine its complexity tier.
-- `chat_completion`: Generate chat completion with intelligent routing.
-- `list_providers`: List available LLM providers and their models.
-
-### Admin Dashboard
-
-The admin dashboard provides monitoring and management endpoints (no authentication required in development).
-
-**Endpoint:** `GET /admin/health`
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-02-28T12:34:56.789Z",
-  "cacheSize": 42,
-  "providers": "available",
-  "classifier": "enabled"
-}
-```
-
-**Endpoint:** `GET /admin/providers`
-**Response:**
-
-```json
-{
-  "providers": [
-    {
-      "name": "deepseek",
-      "displayName": "DeepSeek",
-      "models": ["deepseek-chat", "deepseek-reasoner"]
-    }
-  ],
-  "count": 1
-}
-```
-
-**Endpoint:** `GET /admin/keys` (requires quota management enabled)
-**Response:**
-
-```json
-{
-  "quotaEnabled": true,
-  "count": 2,
-  "keys": [
-    {
-      "apiKey": "sk_test_1...",
-      "limits": { "dailyTokenLimit": 1000000, "monthlyTokenLimit": 30000000 },
-      "usage": {
-        "dailyTokens": 12500,
-        "monthlyTokens": 45000,
-        "remainingDaily": 987500,
-        "remainingMonthly": 29955000,
-        "lastResetDaily": "2026-02-28T00:00:00.000Z",
-        "lastResetMonthly": "2026-02-01T00:00:00.000Z",
-        "requestsCount": 15
-      }
-    }
-  ]
-}
-```
-
-**Endpoint:** `GET /admin/stats`
-**Response:**
-
-```json
-{
-  "cache": {
-    "size": 42,
-    "maxSize": 1000,
-    "ttlMs": 3600000
-  },
-  "providers": {
-    "count": 1,
-    "details": [
-      {
-        "name": "deepseek",
-        "displayName": "DeepSeek",
-        "modelCount": 2
-      }
-    ]
-  },
-  "quota": {
-    "enabled": false,
-    "keyCount": 0
-  },
-  "server": {
-    "uptime": 3600.5,
-    "environment": "development",
-    "port": 94527
-  }
-}
-```
-
-**Endpoint:** `GET /admin/cost`
-**Response:**
-
-```json
-{
-  "costTrackingEnabled": false,
-  "message": "Cost tracking not yet implemented. Planned for Phase 3 enhancement.",
-  "estimatedSavings": {
-    "monthly": 0,
-    "currency": "USD"
-  },
-  "recommendations": [
-    "Implement token usage tracking per model",
-    "Add pricing data for each provider",
-    "Calculate savings from routing simple prompts to cheaper models"
-  ]
-}
-```
 
 ## API 参考
 
@@ -484,52 +239,6 @@ OpenClaw 集成的模型上下文协议端点。
 }
 ```
 
-## Usage Examples
-
-### Classifying a Prompt
-
-```bash
-curl -X POST http://localhost:94527/v1/classify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "请帮我写一个异步的 Python 函数，使用 import aiohttp 来抓取网页内容并解析 JSON。",
-    "estimatedTokens": 60
-  }'
-```
-
-### Intelligent Chat Routing
-
-```bash
-curl -X POST http://localhost:94527/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [
-      {"role": "user", "content": "证明勾股定理，并给出逐步推导过程。"}
-    ],
-    "temperature": 0.1,
-    "max_tokens": 200
-  }'
-```
-
-### Checking Server Health
-
-```bash
-curl http://localhost:94527/health
-```
-
-### Monitoring with Admin Dashboard
-
-```bash
-# Check provider status
-curl http://localhost:94527/admin/providers
-
-# View server statistics
-curl http://localhost:94527/admin/stats
-
-# Check API key usage (if quota enabled)
-curl http://localhost:94527/admin/keys
-```
-
 ## 使用示例
 
 ### 分类提示
@@ -576,18 +285,6 @@ curl http://localhost:94527/admin/stats
 curl http://localhost:94527/admin/keys
 ```
 
-## Architecture
-
-- **L1 Classifier**: Rule‑based 14‑dimensional weighted scorer implemented in `src/core/classifier.ts`.
-- **L2 Classifier**: Optional LLM‑backed classifier (`DeepSeekClassifier`) invoked when L1 confidence is low.
-- **Cache**: LRU cache with TTL (`src/core/cache.ts`).
-- **Enhanced Classifier**: Orchestrates L1/L2 fallback (`src/core/enhanced‑classifier.ts`).
-- **LLM Providers**: Extensible provider system for multiple LLM services (`src/core/llm‑provider.ts`).
-- **Model Router**: Intelligent routing based on classification tiers.
-- **MCP Server**: Model Context Protocol server for OpenClaw integration (`src/mcp/server.ts`).
-- **HTTP Server**: Express‑based API server (`src/server.ts`).
-- **Configuration**: Environment‑based configuration with Zod validation (`src/config.ts`).
-
 ## 架构
 
 - **L1 分类器**：基于规则的 14 维加权评分器，实现在 `src/core/classifier.ts`。
@@ -599,25 +296,6 @@ curl http://localhost:94527/admin/keys
 - **MCP 服务器**：用于 OpenClaw 集成的模型上下文协议服务器（`src/mcp/server.ts`）。
 - **HTTP 服务器**：基于 Express 的 API 服务器（`src/server.ts`）。
 - **配置**：基于环境变量的配置，使用 Zod 验证（`src/config.ts`）。
-
-## Development
-
-### Scripts
-
-- `npm run typecheck` – TypeScript type checking (no emit).
-- `npm run build` – Compile TypeScript to `dist/`.
-- `npm run dev` – Start development server with hot reload.
-- `npm start` – Start production server (requires `npm run build` first).
-- `npm test` – Run the manual classifier test.
-
-### Adding a New LLM Provider
-
-1. Implement the `LLMProvider` interface (see `src/core/llm‑provider.ts`).
-2. Add the corresponding API‑key configuration in `src/config.ts`.
-3. Register the provider in `src/server.ts` when the key is present.
-4. The model router will automatically include the new provider in routing decisions.
-
-See [AGENTS.md](./AGENTS.md) for detailed coding conventions and workflow guidelines.
 
 ## 开发
 
@@ -638,25 +316,6 @@ See [AGENTS.md](./AGENTS.md) for detailed coding conventions and workflow guidel
 
 查看 [AGENTS.md](./AGENTS.md) 了解详细的编码规范和工作流指南。
 
-## Development Status
-
-TopRouter v1.0.0 has completed Phase 1 (core engine) and Phase 2 (protocol & forwarding) from the original roadmap.
-
-**Current features:**
-
-- ✅ 14‑dimensional multilingual classifier with L1/L2 fallback
-- ✅ OpenAI‑compatible API with intelligent routing
-- ✅ Extensible LLM provider system (DeepSeek, Kimi, Zhipu, Qianwen)
-- ✅ Local quota management
-- ✅ Rate limiting and caching
-- ✅ Admin dashboard prototype (keys, stats, providers)
-
-**Next priorities:**
-
-- Enhanced cost‑saving dashboard with actual token tracking
-- Performance optimization and load testing
-- Advanced model‑specific tier optimization for domestic providers
-
 ## 开发状态
 
 TopRouter v1.0.0 已完成原始路线图中的第一阶段（核心引擎）和第二阶段（协议与转发）。
@@ -676,12 +335,350 @@ TopRouter v1.0.0 已完成原始路线图中的第一阶段（核心引擎）和
 - 性能优化与负载测试
 - 针对国内提供商的高级模型层级优化
 
-## License
-
-MIT License. See the [LICENSE](./LICENSE) file for details.
-
 ## 许可证
 
 MIT 许可证。详见 [LICENSE](./LICENSE) 文件。
 
 项目作者是 AI
+
+---
+High-performance, payment-free AI intelligent routing gateway with 14‑dimensional multilingual static analysis and dynamic fallback routing.
+
+## Features
+
+### Core Capabilities
+
+- **14-dimensional multilingual static analysis**: Weighted classification across reasoning, code, technical terms, multi‑step patterns, and more.
+- **L1/L2 fallback system**: Fast rule‑based classification (L1) with optional LLM‑assisted classification (L2) when confidence is low.
+- **LRU caching**: Results cached with TTL to avoid repeated classification of identical prompts.
+- **OpenAI‑compatible API**: Provides `/v1/classify` classification and `/v1/chat/completions` with intelligent routing.
+- **MCP (Model Context Protocol) support**: JSON‑RPC 2.0 interface for OpenClaw integration with tool calling and resource access.
+- **Intelligent model routing**: Automatically routes requests to appropriate models across multiple providers (e.g., SIMPLE → lightweight models, REASONING → high-performance models).
+- **Multi‑provider support**: Integrated support for DeepSeek, Kimi (Moonshot AI), Zhipu AI (GLM), and Qianwen (Alibaba).
+- **Rate limiting**: Per‑IP rate limiting for API endpoints.
+- **Payment‑free design**: No external payment dependencies; uses local quota and API‑key‑based rate limiting.
+- **Admin dashboard**: Built‑in monitoring endpoints for API key usage, provider status, and server statistics.
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+ (ES modules)
+- npm or yarn
+
+### Installation
+
+```bash
+git clone https://github.com/YangjianForWork/TopRouter.git
+cd TopRouter
+npm install
+```
+
+### Configuration
+
+Copy the example environment file and adjust the values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` to set your API keys:
+
+- `DEEPSEEK_API_KEY`: For L2 fallback classification and chat completions
+- `KIMI_API_KEY`, `ZHIPU_API_KEY`, `QIANWEN_API_KEY`: For domestic LLM providers (chat completions)
+- Other configuration options as needed
+
+### Running the Server
+
+**Development mode (hot reload):**
+
+```bash
+npm run dev
+```
+
+**Production mode (build first):**
+
+```bash
+npm run build
+npm start
+```
+
+The server will start on `http://localhost:94527` (or the port set in `PORT`).
+
+## API Reference
+
+### Health Check
+
+**Endpoint:** `GET /health`
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-02-28T12:34:56.789Z"
+}
+```
+
+### Prompt Classification
+
+**Endpoint:** `POST /v1/classify`
+Classify a prompt and estimate its complexity tier.
+
+**Request Body:**
+
+```json
+{
+  "prompt": "请帮我写一个异步的 Python 函数，使用 import aiohttp 来抓取网页内容并解析 JSON。",
+  "estimatedTokens": 60
+}
+```
+
+**Response:**
+
+```json
+{
+  "score": 0.15,
+  "tier": "MEDIUM",
+  "confidence": 0.86,
+  "signals": ["code(import,函数)"],
+  "cached": false
+}
+```
+
+### Intelligent Chat Completion
+
+**Endpoint:** `POST /v1/chat/completions`
+OpenAI‑compatible endpoint with intelligent routing.
+
+**Request Body:**
+
+```json
+{
+  "messages": [{ "role": "user", "content": "证明勾股定理，并给出逐步推导过程。" }],
+  "model": "deepseek-chat", // Optional: override automatic routing
+  "temperature": 0.7,
+  "max_tokens": 100
+}
+```
+
+**Response:** (Follows OpenAI's chat completions format)
+
+### MCP Integration
+
+**Endpoint:** `POST /mcp`
+Model Context Protocol endpoint for OpenClaw integration.
+
+**Available Tools:**
+
+- `classify_prompt`: Classify a prompt and determine its complexity tier.
+- `chat_completion`: Generate chat completion with intelligent routing.
+- `list_providers`: List available LLM providers and their models.
+
+### Admin Dashboard
+
+The admin dashboard provides monitoring and management endpoints (no authentication required in development).
+
+**Endpoint:** `GET /admin/health`
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-02-28T12:34:56.789Z",
+  "cacheSize": 42,
+  "providers": "available",
+  "classifier": "enabled"
+}
+```
+
+**Endpoint:** `GET /admin/providers`
+**Response:**
+
+```json
+{
+  "providers": [
+    {
+      "name": "deepseek",
+      "displayName": "DeepSeek",
+      "models": ["deepseek-chat", "deepseek-reasoner"]
+    }
+  ],
+  "count": 1
+}
+```
+
+**Endpoint:** `GET /admin/keys` (requires quota management enabled)
+**Response:**
+
+```json
+{
+  "quotaEnabled": true,
+  "count": 2,
+  "keys": [
+    {
+      "apiKey": "sk_test_1...",
+      "limits": { "dailyTokenLimit": 1000000, "monthlyTokenLimit": 30000000 },
+      "usage": {
+        "dailyTokens": 12500,
+        "monthlyTokens": 45000,
+        "remainingDaily": 987500,
+        "remainingMonthly": 29955000,
+        "lastResetDaily": "2026-02-28T00:00:00.000Z",
+        "lastResetMonthly": "2026-02-01T00:00:00.000Z",
+        "requestsCount": 15
+      }
+    }
+  ]
+}
+```
+
+**Endpoint:** `GET /admin/stats`
+**Response:**
+
+```json
+{
+  "cache": {
+    "size": 42,
+    "maxSize": 1000,
+    "ttlMs": 3600000
+  },
+  "providers": {
+    "count": 1,
+    "details": [
+      {
+        "name": "deepseek",
+        "displayName": "DeepSeek",
+        "modelCount": 2
+      }
+    ]
+  },
+  "quota": {
+    "enabled": false,
+    "keyCount": 0
+  },
+  "server": {
+    "uptime": 3600.5,
+    "environment": "development",
+    "port": 94527
+  }
+}
+```
+
+**Endpoint:** `GET /admin/cost`
+**Response:**
+
+```json
+{
+  "costTrackingEnabled": false,
+  "message": "Cost tracking not yet implemented. Planned for Phase 3 enhancement.",
+  "estimatedSavings": {
+    "monthly": 0,
+    "currency": "USD"
+  },
+  "recommendations": [
+    "Implement token usage tracking per model",
+    "Add pricing data for each provider",
+    "Calculate savings from routing simple prompts to cheaper models"
+  ]
+}
+```
+
+## Usage Examples
+
+### Classifying a Prompt
+
+```bash
+curl -X POST http://localhost:94527/v1/classify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "请帮我写一个异步的 Python 函数，使用 import aiohttp 来抓取网页内容并解析 JSON。",
+    "estimatedTokens": 60
+  }'
+```
+
+### Intelligent Chat Routing
+
+```bash
+curl -X POST http://localhost:94527/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "证明勾股定理，并给出逐步推导过程。"}
+    ],
+    "temperature": 0.1,
+    "max_tokens": 200
+  }'
+```
+
+### Checking Server Health
+
+```bash
+curl http://localhost:94527/health
+```
+
+### Monitoring with Admin Dashboard
+
+```bash
+# Check provider status
+curl http://localhost:94527/admin/providers
+
+# View server statistics
+curl http://localhost:94527/admin/stats
+
+# Check API key usage (if quota enabled)
+curl http://localhost:94527/admin/keys
+```
+
+## Architecture
+
+- **L1 Classifier**: Rule‑based 14‑dimensional weighted scorer implemented in `src/core/classifier.ts`.
+- **L2 Classifier**: Optional LLM‑backed classifier (`DeepSeekClassifier`) invoked when L1 confidence is low.
+- **Cache**: LRU cache with TTL (`src/core/cache.ts`).
+- **Enhanced Classifier**: Orchestrates L1/L2 fallback (`src/core/enhanced‑classifier.ts`).
+- **LLM Providers**: Extensible provider system for multiple LLM services (`src/core/llm‑provider.ts`).
+- **Model Router**: Intelligent routing based on classification tiers.
+- **MCP Server**: Model Context Protocol server for OpenClaw integration (`src/mcp/server.ts`).
+- **HTTP Server**: Express‑based API server (`src/server.ts`).
+- **Configuration**: Environment‑based configuration with Zod validation (`src/config.ts`).
+
+## Development
+
+### Scripts
+
+- `npm run typecheck` – TypeScript type checking (no emit).
+- `npm run build` – Compile TypeScript to `dist/`.
+- `npm run dev` – Start development server with hot reload.
+- `npm start` – Start production server (requires `npm run build` first).
+- `npm test` – Run the manual classifier test.
+
+### Adding a New LLM Provider
+
+1. Implement the `LLMProvider` interface (see `src/core/llm‑provider.ts`).
+2. Add the corresponding API‑key configuration in `src/config.ts`.
+3. Register the provider in `src/server.ts` when the key is present.
+4. The model router will automatically include the new provider in routing decisions.
+
+See [AGENTS.md](./AGENTS.md) for detailed coding conventions and workflow guidelines.
+
+## Development Status
+
+TopRouter v1.0.0 has completed Phase 1 (core engine) and Phase 2 (protocol & forwarding) from the original roadmap.
+
+**Current features:**
+
+- ✅ 14‑dimensional multilingual classifier with L1/L2 fallback
+- ✅ OpenAI‑compatible API with intelligent routing
+- ✅ Extensible LLM provider system (DeepSeek, Kimi, Zhipu, Qianwen)
+- ✅ Local quota management
+- ✅ Rate limiting and caching
+- ✅ Admin dashboard prototype (keys, stats, providers)
+
+**Next priorities:**
+
+- Enhanced cost‑saving dashboard with actual token tracking
+- Performance optimization and load testing
+- Advanced model‑specific tier optimization for domestic providers
+
+## License
+
+MIT License. See the [LICENSE](./LICENSE) file for details.
