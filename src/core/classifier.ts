@@ -78,7 +78,13 @@ export class TopClassifier {
     }
 
     // 5. multiStepPatterns (0.12)
-    if (/first.*then|step \d|\d\.\s/.test(text)) {
+    // Fixed regex to avoid polynomial backtracking: split into safer patterns
+    const hasMultiStep = 
+      (text.includes('first') && text.includes('then')) ||
+      /step\s+\d/.test(text) ||
+      /\d\.\s/.test(text);
+    
+    if (hasMultiStep) {
       weightedScore += 0.5 * DIMENSION_WEIGHTS.multiStepPatterns;
       signals.push("multi-step");
     }
